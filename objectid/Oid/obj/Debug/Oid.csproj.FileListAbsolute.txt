@@ -1,0 +1,12 @@
+c:\users\yyp\documents\visual studio 2015\Projects\Oid\Oid\bin\Debug\Oid.exe.config
+c:\users\yyp\documents\visual studio 2015\Projects\Oid\Oid\obj\Debug\Oid.csprojResolveAssemblyReference.cache
+c:\users\yyp\documents\visual studio 2015\Projects\Oid\Oid\bin\Debug\Oid.exe
+c:\users\yyp\documents\visual studio 2015\Projects\Oid\Oid\bin\Debug\Oid.pdb
+c:\users\yyp\documents\visual studio 2015\Projects\Oid\Oid\obj\Debug\Oid.exe
+c:\users\yyp\documents\visual studio 2015\Projects\Oid\Oid\obj\Debug\Oid.pdb
+C:\Users\yyp\Source\Repos\V8E\Oid\bin\Debug\Oid.exe.config
+C:\Users\yyp\Source\Repos\V8E\Oid\obj\Debug\Oid.exe
+C:\Users\yyp\Source\Repos\V8E\Oid\obj\Debug\Oid.pdb
+C:\Users\yyp\Source\Repos\C\objectid\Oid\bin\Debug\Oid.exe.config
+C:\Users\yyp\Source\Repos\C\objectid\Oid\obj\Debug\Oid.exe
+C:\Users\yyp\Source\Repos\C\objectid\Oid\obj\Debug\Oid.pdb
