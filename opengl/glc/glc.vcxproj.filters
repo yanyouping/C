@@ -44,6 +44,9 @@
     <ClCompile Include="wnd.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ring.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Resource.rc">

@@ -33,3 +33,7 @@
 *.su
 *.db
 *.opendb
+/objectid/.vs/Oid/v14/.suo
+/opengl/glc/Debug
+/opengl/ipch/GLC-b1997459/GLC-45f15e02.ipch
+/opengl/Debug
