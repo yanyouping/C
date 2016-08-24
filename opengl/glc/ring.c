@@ -1,27 +1,23 @@
-// Win32Project1.cpp : Defines the entry point for the console application.
-//
-
 #include "stdafx.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <process.h>
 #include <Windows.h>
 
-struct ring {
-	volatile long nW, nS;
-	int *buf;
+__declspec(align(64)) struct ring {
+	volatile long nW, nR;
+	volatile int *buf;
 };
 
 int Write(struct ring *_r, int val) {
-
-	int k = _r->nS;
-	if (k < 1) {
+	int k = _r->nW - _r->nR;
+	if (k == -1 || k == 15) {
 		return -1;
 	}
 
 	*(_r->buf + _r->nW) = val;
+
 	_r->nW++;
-	_r->nS--;
 	if (_r->nW > 15)
 		_r->nW = 0;
 
@@ -29,53 +25,69 @@ int Write(struct ring *_r, int val) {
 }
 
 int Read(struct ring *_r, int *val) {
-	int k = _r->nS;
-	if (k == 16) {
+	int k = _r->nW - _r->nR;
+	if (k == 1 || k == -15) {
 		return -1;
 	}
+	_r->nR++;
+	if (_r->nR > 15)
+		_r->nR = 0;
 
-	int nR = _r->nW - 16 + k;
-	if (nR < 0)
-		nR += 16;
+	*val = *(_r->buf + _r->nR);
 
-	*val = *(_r->buf + nR);
-	_r->nS++;
+
 	return 0;
 }
 
 
-void __cdecl _thread(void *p) {
+void __cdecl _rthread(void *p) {
 	struct ring *k = (struct ring*)p;
-	int r;
-
+	int r, l = -1, x = 0;
 	while (1) {
 		if (Read(k, &r) < 0) {
 			continue;
 		}
+		if (r - l > 1) {
+			break;
+		}
 
-		printf("%d\t", r);
+		l = r;
+		printf("%8.8d,", r);
+		if (++x > 9) {
+			x = 0;
+			printf("\r\n");
+		}
 	}
 }
 
+void __cdecl _wthread(void *p) {
+	struct ring *k = (struct ring*)p;
+	int r = 0;
+	while (1) {
+		if (Write(k, r) < 0) {
+			continue;
+		}
+		r++;
+	}
+}
 
 int main()
 {
 	struct ring *k = (struct ring*)malloc(sizeof(struct ring));
 	k->buf = (int*)malloc(sizeof(int) * 16);
-	k->nS = 16;
+	k->nR = 15;
 	k->nW = 0;
 
-	_beginthread(_thread, 0, k);
+	uintptr_t hdl1 = _beginthread(_rthread, 0, k);
+	uintptr_t hdl2 = _beginthread(_wthread, 0, k);
 
-	int i;
-	for (i = 0; i < 2048; ) {
-		if (Write(k, i) == 0)
-			i++;
+	//int i;
+	//for (i = 0; i < 2048*1024; ) {
+	//	if (Write(k, i) == 0)
+	//		i++;
+	//}
 
-		Sleep(1);
-	}
-
-	system("pause");
+	getc(stdin);
 	return 0;
 }
 
