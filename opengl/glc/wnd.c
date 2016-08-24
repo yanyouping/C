@@ -7,6 +7,7 @@
 #include "glext\glext.h"
 #include "glext\glcorearb.h"
 #include "wnd.h"
+#include <varargs.h>
 
 
 #pragma comment(lib, "opengl32.lib")
@@ -50,6 +51,7 @@ void ErrorExit(LPTSTR lpszFunction)
 	//ExitProcess(dw);
 }
 
+static int wsize[2];
 
 LRESULT CALLBACK MainWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -76,6 +78,8 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 		}
 	}
 	break;
+	case WM_ERASEBKGND:
+		return TRUE;
 	case WM_PAINT:
 	{
 		PAINTSTRUCT ps;
@@ -93,6 +97,10 @@ LRESULT CALLBACK MainWndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 		EndPaint(hWnd, &ps);
 	}
 	break;
+	case WM_SIZE:
+		wsize[0] = LOWORD(lParam);
+		wsize[1] = HIWORD(lParam);
+		return 0;
 	case WM_DESTROY:
 		PostQuitMessage(0);
 		break;
@@ -109,21 +117,17 @@ BOOL InitApplication(HINSTANCE hInstance)
 	// Fill in the window class structure with parameters 
 	// that describe the main window. 
 
-	wcx.cbSize = sizeof(wcx);          // size of structure 
-	wcx.style = CS_HREDRAW |
-		CS_VREDRAW;                    // redraw if size changes 
-	wcx.lpfnWndProc = MainWndProc;     // points to window procedure 
-	wcx.cbClsExtra = 0;                // no extra class memory 
-	wcx.cbWndExtra = 0;                // no extra window memory 
-	wcx.hInstance = hInstance;         // handle to instance 
-	wcx.hIcon = LoadIcon(NULL,
-		IDI_APPLICATION);              // predefined app. icon 
-	wcx.hCursor = LoadCursor(NULL,
-		IDC_ARROW);                    // predefined arrow 
-	wcx.hbrBackground = (HBRUSH)GetStockObject(
-		WHITE_BRUSH);                  // white background brush 
-	wcx.lpszMenuName = _T("MainMenu");    // name of menu resource 
-	wcx.lpszClassName = _T("MainWClass");  // name of window class 
+	wcx.cbSize = sizeof(wcx);						// size of structure 
+	wcx.style = CS_HREDRAW | CS_VREDRAW;			// redraw if size changes 
+	wcx.lpfnWndProc = MainWndProc;					// points to window procedure 
+	wcx.cbClsExtra = 0;								// no extra class memory 
+	wcx.cbWndExtra = 0;								// no extra window memory 
+	wcx.hInstance = hInstance;						// handle to instance 
+	wcx.hIcon = LoadIcon(NULL, IDI_APPLICATION);	// predefined app. icon 
+	wcx.hCursor = LoadCursor(NULL, IDC_ARROW);		// predefined arrow 
+	wcx.hbrBackground = NULL;						// (HBRUSH)GetStockObject(WHITE_BRUSH); // white background brush 
+	wcx.lpszMenuName = _T("MainMenu");				// name of menu resource 
+	wcx.lpszClassName = _T("MainWClass");			// name of window class 
 	wcx.hIconSm = (HICON)NULL;
 	/*
 	LoadImage(hInstance, // small class icon
@@ -138,9 +142,77 @@ BOOL InitApplication(HINSTANCE hInstance)
 	return RegisterClassEx(&wcx);
 }
 
+PFNGLDEBUGMESSAGECONTROLPROC glDebugMessageControl;
+PFNGLDEBUGMESSAGEINSERTPROC glDebugMessageInsert;
+PFNGLDEBUGMESSAGECALLBACKPROC glDebugMessageCallback;
+PFNGLGETDEBUGMESSAGELOGPROC glGetDebugMessageLog;
+PFNGLPUSHDEBUGGROUPPROC glPushDebugGroup;
+PFNGLPOPDEBUGGROUPPROC glPopDebugGroup;
 PFNWGLCHOOSEPIXELFORMATARBPROC wglChoosePixelFormatARB;
 PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribsARB;
 PFNWGLGETEXTENSIONSSTRINGARBPROC wglGetExtensionsStringARB;
+PFNGLCLEARBUFFERFVPROC glClearBufferfv;
+
+void APIENTRY DebugProc(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *userParam)
+{
+	char debSource[32], debType[32], debSev[32];
+
+	if (source == GL_DEBUG_SOURCE_API_ARB)
+		strcpy_s(debSource, 32, "OpenGL");
+	else if (source == GL_DEBUG_SOURCE_WINDOW_SYSTEM_ARB)
+		strcpy_s(debSource, 32, "Windows");
+	else if (source == GL_DEBUG_SOURCE_SHADER_COMPILER_ARB)
+		strcpy_s(debSource, 32, "Shader Compiler");
+	else if (source == GL_DEBUG_SOURCE_THIRD_PARTY_ARB)
+		strcpy_s(debSource, 32, "Third Party");
+	else if (source == GL_DEBUG_SOURCE_APPLICATION_ARB)
+		strcpy_s(debSource, 32, "Application");
+	else if (source == GL_DEBUG_SOURCE_OTHER_ARB)
+		strcpy_s(debSource, 32, "Other");
+	else
+		return;
+
+	if (type == GL_DEBUG_TYPE_ERROR)
+		strcpy_s(debType, 32, "error");
+	else if (type == GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR)
+		strcpy_s(debType, 32, "deprecated behavior");
+	else if (type == GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR)
+		strcpy_s(debType, 32, "undefined behavior");
+	else if (type == GL_DEBUG_TYPE_PORTABILITY)
+		strcpy_s(debType, 32, "portability");
+	else if (type == GL_DEBUG_TYPE_PERFORMANCE)
+		strcpy_s(debType, 32, "performance");
+	else if (type == GL_DEBUG_TYPE_OTHER)
+		strcpy_s(debType, 32, "message");
+	else if (type == GL_DEBUG_TYPE_MARKER)
+		strcpy_s(debType, 32, "marker");
+	else if (type == GL_DEBUG_TYPE_PUSH_GROUP)
+		strcpy_s(debType, 32, "push group");
+	else if (type == GL_DEBUG_TYPE_POP_GROUP)
+		strcpy_s(debType, 32, "pop group");
+	else
+		return;
+
+	if (severity == GL_DEBUG_SEVERITY_HIGH_ARB)
+	{
+		strcpy_s(debSev, 32, "high");
+		//if (Test->Success == GENERATE_ERROR || source != GL_DEBUG_SOURCE_SHADER_COMPILER_ARB)
+		//	Test->Error = true;
+	}
+	else if (severity == GL_DEBUG_SEVERITY_MEDIUM_ARB)
+		strcpy_s(debSev, 32, "medium");
+	else if (severity == GL_DEBUG_SEVERITY_LOW_ARB)
+		strcpy_s(debSev, 32, "low");
+	else if (severity == GL_DEBUG_SEVERITY_NOTIFICATION)
+		strcpy_s(debSev, 32, "notification");
+	else
+		return;
+
+	fprintf_s(stderr, "%s: %s(%s) %d: %s\n", debSource, debType, debSev, id, message);
+
+	//if (Test->Success != GENERATE_ERROR && source != GL_DEBUG_SOURCE_SHADER_COMPILER_ARB)
+	//	assert(!Test->Error);
+}
 
 BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
@@ -208,9 +280,17 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	glGetIntegerv(GL_MAJOR_VERSION, &major);
 	glGetIntegerv(GL_MINOR_VERSION, &minor);
 
+	PFNGLDEBUGMESSAGECONTROLPROC glDebugMessageControl = (PFNGLDEBUGMESSAGECONTROLPROC)wglGetProcAddress("glDebugMessageControl");
+	PFNGLDEBUGMESSAGEINSERTPROC glDebugMessageInsert = (PFNGLDEBUGMESSAGEINSERTPROC)wglGetProcAddress("glDebugMessageInsert");
+	PFNGLDEBUGMESSAGECALLBACKPROC glDebugMessageCallback = (PFNGLDEBUGMESSAGECALLBACKPROC)wglGetProcAddress("glDebugMessageCallback");
+	PFNGLGETDEBUGMESSAGELOGPROC glGetDebugMessageLog = (PFNGLGETDEBUGMESSAGELOGPROC)wglGetProcAddress("glGetDebugMessageLog");
+	PFNGLPUSHDEBUGGROUPPROC glPushDebugGroup = (PFNGLPUSHDEBUGGROUPPROC)wglGetProcAddress("glPushDebugGroup");
+	PFNGLPOPDEBUGGROUPPROC glPopDebugGroup = (PFNGLPOPDEBUGGROUPPROC)wglGetProcAddress("glPopDebugGroup");
+
 	wglChoosePixelFormatARB = (PFNWGLCHOOSEPIXELFORMATARBPROC)wglGetProcAddress("wglChoosePixelFormatARB");
 	wglCreateContextAttribsARB = (PFNWGLCREATECONTEXTATTRIBSARBPROC)wglGetProcAddress("wglCreateContextAttribsARB");
 	wglGetExtensionsStringARB = (PFNWGLGETEXTENSIONSSTRINGARBPROC)wglGetProcAddress("wglGetExtensionsStringARB");
+	glClearBufferfv = (PFNGLCLEARBUFFERFVPROC)wglGetProcAddress("glClearBufferfv");
 
 	char* ext = (char*)wglGetExtensionsStringARB(dc);
 
@@ -236,6 +316,16 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	HGLRC rc = wglCreateContextAttribsARB(dc, shared_rc, attribList);
 	wglMakeCurrent(dc, rc);
 
+#if defined(_DEBUG) && defined(GL_KHR_debug)
+	{
+		glEnable(GL_DEBUG_OUTPUT);
+		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+		glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, NULL, GL_TRUE);
+		glDebugMessageCallback(&DebugProc, 0);
+	}
+#endif
+
+
 	// Show the window and send a WM_PAINT message to the window 
 	// procedure. 
 	ShowWindow(hwnd, nCmdShow);
@@ -244,6 +334,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 
 	return TRUE;
 }
+
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	LPSTR lpCmdLine, int nCmdShow)
@@ -256,8 +347,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	if (!InitInstance(hInstance, nCmdShow))
 		return FALSE;
 
+	
 	HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDR_ACC));
 
+	GLfloat clr[4] = { 0,0,.7f,1 };
 	memset(&msg, 0, sizeof(msg));
 	while (msg.message != WM_QUIT)
 	{
@@ -266,6 +359,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
 		}
+		glViewport(0, 0, wsize[0], wsize[1]);
+		glClearBufferfv(GL_COLOR, 0, clr);
+		SwapBuffers(wglGetCurrentDC());
 	}
 	return msg.wParam;
 	UNREFERENCED_PARAMETER(lpCmdLine);
